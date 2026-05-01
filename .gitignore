@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual envs
+venv/
+env/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.spyderproject
+.spyproject
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tool output (NEVER commit真实分析报告 — 含个人观点 + 公司管理层评价)
+output/
+reports/
+*.report.md
+.cache/
+
+# Logs
+*.log
+logs/
+
+# Local config (avoid leaking)
+.env
+config.local.*
+secrets.*
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Pytest / mypy / coverage
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Distribution
+*.tar.gz
+*.whl
