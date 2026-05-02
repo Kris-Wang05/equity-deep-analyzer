@@ -132,13 +132,22 @@ def assess_position(data):
         except Exception:
             ma200 = None
 
-    # 位置判断
-    if pct_from_high is not None and pct_from_high > 30 and pct_vs_ma200 is not None and pct_vs_ma200 < 0:
-        position = "🟢 低位"
-    elif pct_from_high is not None and pct_from_high < 5:
-        position = "🔴 高位"
-    else:
+    # 位置判断（4 档化：避免 BSX 类"距高 -27% 看着够深结果跌到 -49%"误判）
+    # 🔴 高位（<5%）/ 🟡 中间（5-25%）/ 🟠 中度回调（25-40%，警惕继续探底）/ 🟢 深度回调（>40%）
+    if pct_from_high is None:
         position = "🟡 中间"
+    elif pct_from_high < 5:
+        position = "🔴 高位"
+    elif pct_from_high < 25:
+        position = "🟡 中间"
+    elif pct_from_high < 40:
+        position = "🟠 中度回调（非真底，警惕板块逆风时继续下探）"
+    else:
+        # 深度回调还要看是否跌穿 200 日均线
+        if pct_vs_ma200 is not None and pct_vs_ma200 < 0:
+            position = "🟢 深度回调（跌穿 200 日均线，可能进入安全边际区）"
+        else:
+            position = "🟢 深度回调（但仍在 200 日均线上方）"
 
     return {
         "high_52": high_52,

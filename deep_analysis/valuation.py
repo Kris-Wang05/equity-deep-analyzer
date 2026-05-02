@@ -278,7 +278,7 @@ def diagnose(data, category):
                        market_judgment=market_judgment)
 
     # ---- 模块4：原因归类 ----
-    cheap_reason = _classify_reason(data, category, verdict, info)
+    cheap_reason = _classify_reason(data, category, verdict, info, peer_relative)
 
     return {
         "tools": tools_desc,
@@ -432,10 +432,11 @@ def _verdict(cat_key, info, peg, forward_pe, p_s, peer_pe_avg, peer_peg_avg, pee
     return "🟡 合理"
 
 
-def _classify_reason(data, category, verdict, info):
+def _classify_reason(data, category, verdict, info, peer_relative=None):
     """
     模块4：归类便宜/贵的原因。
     A 起步阶段 / B 暂时利空 / C 周期底部 / D 结构性问题 / E 假便宜
+    F 市场预知坏消息（板块逆风 + 同行折价 + 营收减速 三重信号，对应 BSX 类陷阱）
     """
     qf = data.get("quarterly_income_stmt")
     if qf is None:
@@ -445,9 +446,36 @@ def _classify_reason(data, category, verdict, info):
     high_52w = info.get("fiftyTwoWeekHigh")
     price = info.get("currentPrice") or info.get("regularMarketPrice")
     p_b = info.get("priceToBook")
+    market_judgment = data.get("market_judgment", "中性")
 
     # 季度营收变化
     growths = _quarterly_revenue_growths(qf)
+
+    # F 类（优先于 E/B 检查）：市场领先于基本面 1-2 季度
+    # 触发条件：估值 🟢 + 板块逆风/中性 + 同行折价 >25% + 单季 YoY 减速 >5pp
+    # 对应 BSX 4/22 案例：板块 IHI -18% 逆风、PEG 同行折价、Q4 organic 转负
+    if "🟢" in verdict and market_judgment in ("逆风", "中性"):
+        peer_discount = False
+        if peer_relative:
+            for pr in peer_relative:
+                if pr.get("vs_peer_pct") is not None and pr["vs_peer_pct"] < -25:
+                    peer_discount = True
+                    break
+        revenue_decel = False
+        decel_evidence = ""
+        if growths and len(growths) >= 2:
+            last_g = growths[-1]
+            prev_g = growths[-2]
+            if last_g is not None and prev_g is not None and (prev_g - last_g) > 5:
+                revenue_decel = True
+                decel_evidence = f"近 2 季度 YoY: {prev_g:+.1f}% → {last_g:+.1f}%（减速 {prev_g - last_g:.1f}pp）"
+        if peer_discount and revenue_decel:
+            return {
+                "class": "F",
+                "label": "市场预知坏消息（领先于基本面 1-2 季度）",
+                "reason": f"估值 🟢 + 板块{market_judgment} + 同行折价 + 单季 YoY 减速 — 市场可能已嗅到 guide 下调 / 同业坏消息 / 监管变化",
+                "evidence": f"参考 BSX 4/22 砍 4pp guide 案例。{decel_evidence}。建议**等下次财报后再决定**，不要被 PEG 折价误导",
+            }
 
     # E 类：估值=🔴 → 假便宜
     if "🔴" in verdict and "投机" not in verdict:
